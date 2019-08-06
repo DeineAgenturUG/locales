@@ -1341,7 +1341,7 @@ func parseDateTimeFormat(baseLocale, format string, eraScore uint8) (results str
 				results += "b = append(b, " + fmt.Sprintf("%#v", []byte(format[start:i])) + "...)\n"
 			}
 
-			results += "b = append(b, " + baseLocale + ".timeSeparator...)"
+			results += "b = append(b, " + baseLocale + ".timeSeparator...)\n"
 		case '\'':
 
 			i++
@@ -2045,12 +2045,14 @@ type sortRank struct {
 	Value string
 }
 
+// ByRank sorted Ranks
 type ByRank []sortRank
 
 func (a ByRank) Len() int           { return len(a) }
 func (a ByRank) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 func (a ByRank) Less(i, j int) bool { return a[i].Rank < a[j].Rank }
 
+// ByPluralRule by ...
 type ByPluralRule []locales.PluralRule
 
 func (a ByPluralRule) Len() int           { return len(a) }
@@ -2508,7 +2510,12 @@ FIND:
 		psI := pluralStringToInt(rule.Count)
 		pluralArr = append(pluralArr, psI)
 
-		data := strings.Replace(strings.Replace(strings.Replace(strings.TrimSpace(strings.SplitN(rule.Common.Data(), "@", 2)[0]), " = ", " == ", -1), " or ", " || ", -1), " and ", " && ", -1)
+		data := strings.TrimSpace(strings.SplitN(rule.Common.Data(), "@", 2)[0])
+		data = strings.Replace(data, "=", " == ", -1)
+		data = strings.Replace(data, "! == ", " != ", -1)
+		data = strings.Replace(data, " or ", " || ", -1)
+		data = strings.Replace(data, " and ", " && ", -1)
+		data = strings.Replace(data, "  ", " ", -1)
 
 		if len(data) == 0 {
 			if len(prCardinal.PluralRule) == 1 {
@@ -2563,7 +2570,6 @@ FIND:
 		//
 		// split by 'or' then by 'and' allowing to better
 		// determine bracketing for formula
-
 		ors := strings.Split(data, "||")
 
 		for _, or := range ors {
@@ -2603,7 +2609,7 @@ FIND:
 
 								switch preOperator {
 								case "==":
-									pre += lft + " >= " + rng[0] + " && " + lft + "<=" + rng[1]
+									pre += lft + " >= " + rng[0] + " && " + lft + " <= " + rng[1]
 								case "!=":
 									pre += "(" + lft + " < " + rng[0] + " || " + lft + " > " + rng[1] + ")"
 								}
@@ -2632,9 +2638,9 @@ FIND:
 							// single comma separated values
 							switch preOperator {
 							case "==":
-								pre += " " + lft + preOperator + carg + " || "
+								pre += " " + lft + " " + preOperator + " " + carg + " || "
 							case "!=":
-								pre += " " + lft + preOperator + carg + " && "
+								pre += " " + lft + " " + preOperator + " " + carg + " && "
 							}
 
 						}
@@ -2650,7 +2656,7 @@ FIND:
 						continue
 					}
 
-					if strings.Contains(a, "=") || a == ">" || a == "<" {
+					if strings.Contains(a, "=") || a == "!" || a == ">" || a == "<" {
 						inArg = true
 						preOperator = a
 						continue
